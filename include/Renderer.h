@@ -1,26 +1,23 @@
-// Renderer.h
-
 #pragma once
-
-#include "Window.h"
-#include "Shader.h"
-#include "glad/glad.h"
-#include <memory>
+#include <string>
+#include <GL/glew.h>
+#include <vector>
 
 class Renderer {
 public:
-    Renderer(Window &window);
+    Renderer(int width, int height);
     ~Renderer();
-
-    void initialize();
-    void render();
-    void cleanup();
+    bool init();
+    void updateFFTTexture(const std::vector<float>& fftData);
+    void render(float time);
 
 private:
-    Window &window;
-    std::unique_ptr<Shader> shader;
+    int m_width;
+    int m_height;
+    GLuint m_program;
+    GLuint m_vao, m_vbo;
+    GLuint m_fftTexture;
 
-    GLuint VAO, VBO;
-    void setupTri();
+    GLuint loadShader(const std::string& path, GLenum type);
+    GLuint createProgram(GLuint vertShader, GLuint fragShader);
 };
-

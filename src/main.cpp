@@ -1,45 +1,53 @@
-// main.cpp
-
-#include "Window.h"
+#include "AudioPlayer.h"
+#include "AudioAnalyzer.h"
 #include "Renderer.h"
+#include <SDL2/SDL.h>
 #include <iostream>
 
-// Callback function for framebuffer size changes
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-// Process input
-void processInput(Window& window) {
-    GLFWwindow* glfwWindow = window.getGLFWwindow();
-    if (glfwGetKey(glfwWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(glfwWindow, true);
-}
-
 int main() {
-    try {
-        Window window(800, 600, "3DVisualizer");
-        window.makeContextCurrent();
-        window.setFramebufferSizeCallback(framebuffer_size_callback);
-
-        Renderer renderer(window);
-
-        // Render loop
-        while (!window.shouldClose()) {
-            // Input
-            processInput(window);
-
-            // Render
-            renderer.render();
-
-            // Swap buffers and poll events
-            window.swapBuffers();
-            window.pollEvents();
-        }
-    }
-    catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+    // Initialize audio player
+    AudioPlayer player("assets/audio.wav");
+    if (!player.init()) {
         return -1;
+    }
+    player.play();
+
+    // Set up analyzer (FFT size = 1024 as an example)
+    const size_t FFT_SIZE = 1024;
+    AudioAnalyzer analyzer(FFT_SIZE);
+
+    // Set up renderer
+    Renderer renderer(800, 600);
+    if (!renderer.init()) {
+        return -1;
+    }
+
+    // Main loop
+    bool running = true;
+    Uint32 startTicks = SDL_GetTicks();
+
+    std::vector<float> timeDomain(FFT_SIZE, 0.0f);
+    std::vector<float> fftOutput;
+
+    while (running) {
+        SDL_Event e;
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) {
+                running = false;
+            }
+        }
+
+        // Get current samples (for this example, we try to fetch samples from the file)
+        if (player.getCurrentSamples(timeDomain, FFT_SIZE)) {
+            // Perform FFT
+            analyzer.performFFT(timeDomain, fftOutput);
+
+            // Update texture with FFT data
+            renderer.updateFFTTexture(fftOutput);
+        }
+
+        float currentTime = (SDL_GetTicks() - startTicks) / 1000.0f;
+        renderer.render(currentTime);
     }
 
     return 0;

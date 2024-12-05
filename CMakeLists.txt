@@ -9,7 +9,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 file(GLOB_RECURSE SOURCES
     "src/*.cpp"
     "src/*.h"
-    "external/glad/src/glad.c"
 )
 
 
@@ -19,35 +18,49 @@ add_executable(3DVisualizer ${SOURCES})
 include(FetchContent)
 
 FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        3.3.8  # Use the latest stable release
+    SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG        release-2.30.9
 )
 
-FetchContent_MakeAvailable(glfw)
+FetchContent_MakeAvailable(SDL2)
+
+FetchContent_Declare(
+    glew
+    GIT_REPOSITORY https://github.com/nigels-com/glew.git
+    GIT_TAG        glew-2.2.0
+)
+
+FetchContent_MakeAvailable(glew)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
-    ${PROJECT_SOURCE_DIR}/external/glad/include
-    ${glfw_SOURCE_DIR}/include
 )
+
+# Find SDL2
+find_package(SDL2 REQUIRED)
+if (SDL2_FOUND)
+    message(STATUS "SDL2 found: ${SDL2_LIBRARIES}")
+    include_directories(${SDL2_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "SDL2 not found")
+endif()
 
 # Link libraries
 target_link_libraries(3DVisualizer
-    glfw
-    dl  # For dynamic loading on Linux
-    pthread  # For threading on Linux
+    dl
+    pthread
+    SDL2
+    GLEW
 )
 
-# On Windows, you may need to link against opengl32
+
 if (WIN32)
     target_link_libraries(3DVisualizer opengl32)
 elseif(APPLE)
-    # On macOS, link against OpenGL framework
     find_library(OpenGL_LIBRARY OpenGL)
     target_link_libraries(3DVisualizer ${OpenGL_LIBRARY})
 else()
-    # On Linux, link against GL
     target_link_libraries(3DVisualizer GL)
 endif()
 
